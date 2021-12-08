@@ -9,8 +9,8 @@ RUN mkdir trade_agent_mqtt
 WORKDIR /trade_agent_mqtt
 COPY . .
 
-RUN apt update -y && \
-    apt install -y tzdata wget && \
+RUN apt update && \
+    apt install -y tzdata wget gnupg && \
     wget http://repo.mosquitto.org/debian/mosquitto-repo.gpg.key && \
     apt-key add mosquitto-repo.gpg.key && \
     wget http://repo.mosquitto.org/debian/mosquitto-jessie.list -O /etc/apt/sources.list.d/mosquitto-jessie.list && \
