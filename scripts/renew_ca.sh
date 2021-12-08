@@ -53,3 +53,4 @@ openssl req -config ./configs/certs/clientssl.cnf -new -key ./configs/certs/clie
 openssl x509 -req -in ./configs/certs/client.csr -CA ./configs/certs/ca.crt -CAkey ./configs/certs/ca.key -CAcreateserial -out ./configs/certs/client.crt -days 3650
 
 openssl dhparam -out ./configs/certs/dhparam.pem 2048
+mv ./.srl ./configs/certs
