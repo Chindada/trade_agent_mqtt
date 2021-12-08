@@ -1,0 +1,62 @@
+include:
+  - template: SAST.gitlab-ci.yml
+
+variables:
+  DOCKER_DRIVER: overlay2
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+
+stages:
+  - build
+  - deployment
+
+docker_build:
+  image: docker:latest
+  only:
+    - main
+  stage: build
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $IMAGE_TAG .
+    - docker push $IMAGE_TAG
+    - docker rmi $IMAGE_TAG
+    - docker system prune --volumes -f
+
+docker-deploy:
+  image: alpine:latest
+  only:
+    - main
+  stage: deployment
+  script:
+    - chmod og= $ID_ED25519
+    - apk update && apk add openssh-client
+    - ssh -i $ID_ED25519 -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY"
+    - ssh -i $ID_ED25519 -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker pull $IMAGE_TAG"
+    - ssh -i $ID_ED25519 -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker stop trade_agent_mqtt || true"
+    - ssh -i $ID_ED25519 -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker system prune --volumes -f"
+    - |
+      ssh -i $ID_ED25519 -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker run --name trade_agent_mqtt \
+      --network tocvlan \
+      --ip=172.20.10.225 \
+      --restart always \
+      -e TZ="Asia/Taipei" \
+      -dt $IMAGE_TAG"
+  environment:
+    name: review/$CI_COMMIT_REF_NAME
+    on_stop: stop_production
+
+stop_production:
+  image: alpine:latest
+  only:
+    - main
+  stage: deployment
+  script:
+    - chmod og= $ID_ED25519
+    - apk update && apk add openssh-client
+    - ssh -i $ID_ED25519 -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker stop trade_agent_mqtt"
+    - ssh -i $ID_ED25519 -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker system prune --volumes -f"
+    - ssh -i $ID_ED25519 -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP "docker rmi $IMAGE_TAG"
+  when: manual
+  environment:
+    name: review/$CI_COMMIT_REF_NAME
+    action: stop
