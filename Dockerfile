@@ -1,9 +1,7 @@
-FROM debian:bullseye as production-stage
+FROM debian:bullseye
 USER root
 
-ENV DEPLOYMENT=docker
 ENV TZ=Asia/Taipei
-
 WORKDIR /
 RUN mkdir trade_agent_mqtt
 WORKDIR /trade_agent_mqtt
